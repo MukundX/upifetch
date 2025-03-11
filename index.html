@@ -6,7 +6,8 @@
     <title>UPI Scanner & Name Finder</title>
     <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
     <style>
-        video { width: 100%; max-width: 400px; }
+    	body {background-color:black;color:white}
+        video { width: 100%; max-width: 400px; border-radius:10px;border:3px solid white}
         canvas { display: none; }
     </style>
 </head>
@@ -17,6 +18,8 @@
     <p id="result">Scan a UPI QR code to get details</p>
 
     <script>
+        let stream = null; // Store camera stream
+
         async function startScanner() {
             const video = document.getElementById("video");
             const canvas = document.getElementById("canvas");
@@ -24,10 +27,10 @@
             const resultElement = document.getElementById("result");
 
             try {
-                const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+                stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
                 video.srcObject = stream;
 
-                setInterval(() => {
+                const scanInterval = setInterval(() => {
                     canvas.width = video.videoWidth;
                     canvas.height = video.videoHeight;
                     context.drawImage(video, 0, 0, canvas.width, canvas.height);
@@ -41,7 +44,9 @@
                             const upiID = new URL(upiLink).searchParams.get("pa");
                             if (upiID) {
                                 resultElement.innerHTML = `UPI ID: <b>${upiID}</b>`;
+                                stopCamera();
                                 fetchBankHolderName(upiID);
+                                clearInterval(scanInterval);
                             } else {
                                 resultElement.textContent = "UPI ID not found in QR code.";
                             }
@@ -55,8 +60,15 @@
             }
         }
 
+        function stopCamera() {
+            if (stream) {
+                stream.getTracks().forEach(track => track.stop());
+            }
+            document.getElementById("video").style.display = "none";
+        }
+
         function fetchBankHolderName(upiID) {
-            fetch(`https://your-api.com/getName?upi=${upiID}`)  // Replace with a real API
+            fetch(`https://your-api.com/getName?upi=${upiID}`)  // Replace with real API
                 .then(response => response.json())
                 .then(data => {
                     document.getElementById("result").innerHTML += `<br>Holder Name: <b>${data.name || "Not Available"}</b>`;
